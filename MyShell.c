@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
 
  while (1) {
   printf("MyShell> ");
+  // ChatGPT reccomended using getchar()
   char curChar = getchar();
   if (curChar == '\n') {
       
@@ -63,6 +64,7 @@ int main(int argc, char **argv) {
   // ChatGPT reccomended this function fgets()
   fgets(input, sizeof(input), stdin);
   // printf("MyShell> %s=%s\n", input, exit1);
+  // ChatGPT reccomended using strcmp()
     if (strcmp(input, "exit\n") == 0) {
       EXIT_SUCCESS = 0;
       break;
