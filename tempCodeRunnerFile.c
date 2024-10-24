@@ -1,2 +1,5 @@
-
-  return EXIT_SUCCESS;
+  char curChar = getchar();
+    if (curChar == '\n') {
+      printf("MyShell> ");
+      continue; 
+    } 

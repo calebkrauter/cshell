@@ -49,27 +49,21 @@ int main(int argc, char **argv) {
   char input[250];
   const char *exit1 = "exit";
   const char cont = '\0';
-  // scanf("%s", &input);
 
-  int length = 0;
-  printf("MyShell> ");
  while (1) {
+  printf("MyShell> ");
   char curChar = getchar();
-    printf("MyShell> ");
-    length++;
-    // printf("MyShell> ");
-if (curChar == '\n') {
-      continue; 
-    }
-    if (length > 1) {
-      scanf("%99s", &input);
-      continue;
-    } else if (length == 1) {
-      scanf("%c", &input);
-      continue; 
-    } 
-    
-    if (strcmp(input, exit1) == 0) {
+  if (curChar == '\n') {
+      
+    continue; 
+  } else {
+    // ChatGPT reccomended this function ungetc()
+    ungetc(curChar, stdin);
+  }
+  // ChatGPT reccomended this function fgets()
+  fgets(input, sizeof(input), stdin);
+  // printf("MyShell> %s=%s\n", input, exit1);
+    if (strcmp(input, "exit\n") == 0) {
       EXIT_SUCCESS = 0;
       break;
     }
