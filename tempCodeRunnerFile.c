@@ -1,1 +1,2 @@
- % 10
+heck++;
+  // printf("%d", check);
