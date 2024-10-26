@@ -30,7 +30,7 @@ DONOT change the existing function definitions. You can add functions, if necess
 int execute(char** args)
 {
 
-  printf("%d", args[256][256]);
+  // printf("%d", args[256][256]);
   // // FROM SLIDES
   // printf("hello world (pid:%d)\n", (int)getpid());
   // int rc = fork();
@@ -65,7 +65,6 @@ int execute(char** args)
  */
 char** parse(void)
 {
-  // int* argumentCount = (int*)malloc(sizeof(int));
   // *argumentCount = 0;
   char curArg[10000];
 
@@ -114,28 +113,14 @@ int main(int argc, char** argv) {
       // to ensure fgets() has the whole line of input, ChatGPT suggested this function ungetc()
       ungetc(curChar, stdin);
     }
-
-    // printf("%d", sizeof(input));
-    // printf("%d", sizeof("aaa"));
-
-    // This seems to cause a segmentation fault.
-    // fgets(resize(input, &argSize), sizeof(resize(input, &argSize)), stdin);
-
-    // printf("MyShell> %s=%s\n", input, exit1);
-    // if (strstr(input, ""))
-      // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
+    // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
+    // printf("%d", strcmp(*parse(), "exit"));
     // printf("%s", *parse());
-    // printf("%s", parse());
     if (strcmp(*parse(), "exit") == 0) {
       // EXIT_SUCCESS = 0;
-      break;
+      return 0;
     }
-    // execute(parse());
-    // printf("%d", argumentCount);
   }
-  // free(argSize);
-  // free(input);
-  // free(argumentCount);
   // return EXIT_SUCCESS;
   return 0;
 }
@@ -160,7 +145,8 @@ char** tokenizeLineOfInput(char* input) {
       // another iterator for the characters and resetting it
       // to 0 for each word which I have done a few lines below.
       args[wordI][charI++] = input[n];
-      // args[wordI][charI + 1] = '\0';
+      // ChatGPT 2 suggested I null terminate the words.
+      args[wordI][charI] = '\0';
       // printf("%c", input[n]);
     }
     else {
@@ -169,15 +155,16 @@ char** tokenizeLineOfInput(char* input) {
       wordI++;
     }
   }
+  // Storing word count into the arguments.
+  // This is a temporary fix until I figure out dynamic
+  // resizing and reallocating.
   args[256][256] = wordI;
-  // FOR TESTING.
-  // for (int n = 0; n < 4; n++) {
-
-  //   printf("%s", args[n]);
-  // }
   return args;
 }
 
+// This resize function is intended for resizing
+// the storage allocated for a string.
+// However I also need to dynamically resize for the number of words.
 char* resize(char* input, int* argSize) {
   // printf("%s", input);
   for (int n = 0; n < strlen(input); n++) {
