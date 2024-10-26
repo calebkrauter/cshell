@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <signal.h>
 char** tokenizeLineOfInput(char* input);
 char* resize(char* input, int* argSize);
 /***************************************************************************
@@ -30,31 +31,48 @@ DONOT change the existing function definitions. You can add functions, if necess
 int execute(char** args)
 {
 
-  // printf("%d", args[256][256]);
+
+  // Storage of word count metadata.
+  printf("%s", args[0]);
+
   // // FROM SLIDES
-  // printf("hello world (pid:%d)\n", (int)getpid());
-  // int rc = fork();
-  // if (rc < 0) {
-  //   // fork failed; exit
-  //   fprintf(stderr, "fork failed\n");
-  //   exit(1);
-  // }
-  // else if (rc == 0) {
-  //   // child (new process)
-  //   printf("hello, I am child (pid:%d)\n", (int)getpid());
-  //   char* myargs[3];
-  //   myargs[0] = strdup("wc"); // program: "wc" (word count)
-  //   myargs[1] = strdup("p3.c"); // argument: file to count
-  //   myargs[2] = NULL; // marks end of array
-  //   execvp(myargs[0], myargs); // runs word count
-  //   printf("this shouldn't print out");
-  // }
-  // else {
-  //   // parent goes down this path (original process)
-  //   int wc = wait(NULL);
-  //   printf("hello, I am parent of %d (wc:%d) (pid:%d)\n",
-  //          rc, wc, (int)getpid());
-  // }
+  printf("pid:%d\n", (int)getpid());
+  int rc = fork();
+  if (rc < 0) {
+    fprintf(stderr, " could not fork.\n");
+    // MAY NEED TO FREE ARGS here too.
+    // for (int n = 0; n <= 256; n++) {
+    //   free(args[n]);
+    // }
+    // free(args);
+    exit(1);
+  }
+  else if (rc == 0) {
+    printf("Fork successful, child pid:%d\n", (int)getpid());
+    if (strcmp(args[0], "exit") == 0) {
+      printf("%s", args[0]);
+      printf("%d", strcmp(args[0], "exit"));
+      // for (int n = 0; n <= 256; n++) {
+      //   free(args[n]);
+      // }
+      // free(args);
+      // Suggested by chatGPT 2 and include statement.
+      return 1;
+    }
+    execvp(args[0], args);
+    printf("Running command: %s\n", args[0]);
+
+  }
+  else {
+    int wc = wait(NULL);
+    printf("Parent pid: %d of child %d wc %d\n", (int)getpid(), rc, wc);
+  }
+
+  // FREE ARGS
+  for (int n = 0; n <= 256; n++) {
+    free(args[n]);
+  }
+  free(args);
   return 0;
 }
 
@@ -72,8 +90,10 @@ char** parse(void)
   // and %c would not include full strings, ChatGPT suggested this function fgets()
   fgets(curArg, sizeof(curArg), stdin);
   char** args = tokenizeLineOfInput(curArg);
-
-  execute(args);
+  printf("%d", execute(args));
+  // if (execute(args) == 1) {
+  //   exit(EXIT_SUCCESS);
+  // }
   // printf("%s", tokenizeLineOfInput(curArg)[0]);
   return args;
 }
@@ -87,20 +107,8 @@ char** parse(void)
    @return status code
  */
 int main(int argc, char** argv) {
-  // int EXIT_SUCCESS = 1;
-  // Using 11 because I want ten characters plus the \0 character allowed.
-  int defaultArgSize = 11;
-  int* argSize = (int*)malloc(sizeof(int));
-  *argSize = defaultArgSize;
-  // ONLY USE IF RESIZING DYNAMICALLY. TODO FIX DYNAMIC RESIZING.
-  // char* input = (char*)malloc(sizeof(char) * (*argSize));
-  const char* exit1 = "exit";
-  const char cont = '\0';
-
   while (1) {
     printf("MyShell> ");
-
-    // printf("%s", argv[0]);
     // I needed a way to check the current character to account for newlines, ChatGPT suggested using getchar()
     char curChar = getchar();
     if (curChar == '\n') {
@@ -114,15 +122,18 @@ int main(int argc, char** argv) {
       ungetc(curChar, stdin);
     }
     // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
-    // printf("%d", strcmp(*parse(), "exit"));
     // printf("%s", *parse());
-    if (strcmp(*parse(), "exit") == 0) {
-      // EXIT_SUCCESS = 0;
-      return 0;
+    char exitArg[1000];
+    fgets(exitArg, sizeof(exitArg), stdin);
+    if (strcmp(exitArg, "exit\n") == 0) {
+      break;
     }
+    else {
+      parse();
+    }
+
   }
-  // return EXIT_SUCCESS;
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 // 2 Used chatGPT to determine how to use argumentCount correctly as a pointer.
@@ -131,7 +142,7 @@ char** tokenizeLineOfInput(char* input) {
   // printf("%s", input);
 
 // Fixed with chatgpt.
-  char** args = (char**)malloc(1 * sizeof(char*));
+  char** args = (char**)malloc(257 * sizeof(char*));
   for (int n = 0; n <= 256; n++) {
     args[n] = (char*)malloc(257 * sizeof(char));
   }
@@ -153,12 +164,14 @@ char** tokenizeLineOfInput(char* input) {
       charI = 0;
       // args[wordI] = (char*)realloc(args, sizeof(args) + sizeof(char) * 256);
       wordI++;
+      // ChatGPT 2 said I need to null terminate for execute to work.
+      args[wordI] = NULL;
     }
   }
   // Storing word count into the arguments.
   // This is a temporary fix until I figure out dynamic
   // resizing and reallocating.
-  args[256][256] = wordI;
+  // args[256][256] = wordI;
   return args;
 }
 
