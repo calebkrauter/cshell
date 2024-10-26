@@ -49,16 +49,7 @@ int execute(char** args)
   }
   else if (rc == 0) {
     printf("Fork successful, child pid:%d\n", (int)getpid());
-    if (strcmp(args[0], "exit") == 0) {
-      printf("%s", args[0]);
-      printf("%d", strcmp(args[0], "exit"));
-      // for (int n = 0; n <= 256; n++) {
-      //   free(args[n]);
-      // }
-      // free(args);
-      // Suggested by chatGPT 2 and include statement.
-      return 1;
-    }
+
     execvp(args[0], args);
     printf("Running command: %s\n", args[0]);
 
@@ -66,6 +57,7 @@ int execute(char** args)
   else {
     int wc = wait(NULL);
     printf("Parent pid: %d of child %d wc %d\n", (int)getpid(), rc, wc);
+    return 0;
   }
 
   // FREE ARGS
@@ -73,6 +65,7 @@ int execute(char** args)
     free(args[n]);
   }
   free(args);
+  exit(1);
   return 0;
 }
 
@@ -123,15 +116,10 @@ int main(int argc, char** argv) {
     }
     // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
     // printf("%s", *parse());
-    char exitArg[1000];
-    fgets(exitArg, sizeof(exitArg), stdin);
-    if (strcmp(exitArg, "exit\n") == 0) {
-      break;
+    if (strcmp(*parse(), "exit") == 0) {
+      // break;
+      return EXIT_SUCCESS;
     }
-    else {
-      parse();
-    }
-
   }
   return EXIT_SUCCESS;
 }
