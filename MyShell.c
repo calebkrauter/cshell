@@ -2,9 +2,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
-
-void countArguments(char* input, int* argumentCuont);
-int resize(char* input, int* argSize);
+#include <unistd.h>
+#include <sys/wait.h>
+char** tokenizeLineOfInput(char* input);
+char* resize(char* input, int* argSize);
 /***************************************************************************
   @file         MyShell.c
   @author       Juhua Hu
@@ -29,6 +30,32 @@ DONOT change the existing function definitions. You can add functions, if necess
 int execute(char** args)
 {
 
+  printf("%d", args[256][256]);
+  // // FROM SLIDES
+  // printf("hello world (pid:%d)\n", (int)getpid());
+  // int rc = fork();
+  // if (rc < 0) {
+  //   // fork failed; exit
+  //   fprintf(stderr, "fork failed\n");
+  //   exit(1);
+  // }
+  // else if (rc == 0) {
+  //   // child (new process)
+  //   printf("hello, I am child (pid:%d)\n", (int)getpid());
+  //   char* myargs[3];
+  //   myargs[0] = strdup("wc"); // program: "wc" (word count)
+  //   myargs[1] = strdup("p3.c"); // argument: file to count
+  //   myargs[2] = NULL; // marks end of array
+  //   execvp(myargs[0], myargs); // runs word count
+  //   printf("this shouldn't print out");
+  // }
+  // else {
+  //   // parent goes down this path (original process)
+  //   int wc = wait(NULL);
+  //   printf("hello, I am parent of %d (wc:%d) (pid:%d)\n",
+  //          rc, wc, (int)getpid());
+  // }
+  return 0;
 }
 
 
@@ -38,7 +65,18 @@ int execute(char** args)
  */
 char** parse(void)
 {
+  // int* argumentCount = (int*)malloc(sizeof(int));
+  // *argumentCount = 0;
+  char curArg[10000];
 
+  // I needed a way to take user input that wasn't constrained to a specfic type of data. Scanf() with %s would not include single characters
+  // and %c would not include full strings, ChatGPT suggested this function fgets()
+  fgets(curArg, sizeof(curArg), stdin);
+  char** args = tokenizeLineOfInput(curArg);
+
+  execute(args);
+  // printf("%s", tokenizeLineOfInput(curArg)[0]);
+  return args;
 }
 
 
@@ -53,13 +91,13 @@ int main(int argc, char** argv) {
   // int EXIT_SUCCESS = 1;
   // Using 11 because I want ten characters plus the \0 character allowed.
   int defaultArgSize = 11;
-  int* argSize;
+  int* argSize = (int*)malloc(sizeof(int));
   *argSize = defaultArgSize;
-  char* input = (char*)malloc(sizeof(char) * (*argSize));
-  // char input[100];
+  // ONLY USE IF RESIZING DYNAMICALLY. TODO FIX DYNAMIC RESIZING.
+  // char* input = (char*)malloc(sizeof(char) * (*argSize));
   const char* exit1 = "exit";
   const char cont = '\0';
-  int* argumentCount = 0;
+
   while (1) {
     printf("MyShell> ");
 
@@ -76,52 +114,71 @@ int main(int argc, char** argv) {
       // to ensure fgets() has the whole line of input, ChatGPT suggested this function ungetc()
       ungetc(curChar, stdin);
     }
-    // I needed a way to take user input that wasn't constrained to a specfic type of data. Scanf() with %s would not include single characters
-    // and %c would not include full strings, ChatGPT suggested this function fgets()
+
     // printf("%d", sizeof(input));
     // printf("%d", sizeof("aaa"));
 
-    fgets(input, resize(input, &argSize), stdin);
-    // printf("%d", check);
-    // printf("%s", input);
+    // This seems to cause a segmentation fault.
+    // fgets(resize(input, &argSize), sizeof(resize(input, &argSize)), stdin);
 
-
-    countArguments(input, &argumentCount);
     // printf("MyShell> %s=%s\n", input, exit1);
-    if (strstr(input, ""))
+    // if (strstr(input, ""))
       // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
-      if (strcmp(input, "exit\n") == 0) {
-        // EXIT_SUCCESS = 0;
-        break;
-      }
+    // printf("%s", *parse());
+    // printf("%s", parse());
+    if (strcmp(*parse(), "exit") == 0) {
+      // EXIT_SUCCESS = 0;
+      break;
+    }
+    // execute(parse());
     // printf("%d", argumentCount);
   }
-  free(input);
+  // free(argSize);
+  // free(input);
+  // free(argumentCount);
   // return EXIT_SUCCESS;
   return 0;
 }
 
 // 2 Used chatGPT to determine how to use argumentCount correctly as a pointer.
-void countArguments(char* input, int* argumentCount) {
-  *argumentCount = 0;
-  // printf("%s", input);
-  for (int n = 0; n < strlen(input); n++) {
-    // printf("%d", n);
-    // I needed a way to have a delimiter to parse commands by checking sections of whitespace, chatGPT suggested isspace()
-    if (!isspace(*input) && n == 0) {
-      *argumentCount = *argumentCount + 1;
-      // I got help for the notation of *(input + n) from chatGPT because I thought it would be necessary, I learned it wasn't
-      // and still prefer this notation.
-    }
-    else if (n < strlen(input) - 1 && isspace(*(input + n)) && !isspace(*(input + (n + 1)))) {
-      *argumentCount = *argumentCount + 1;
+char** tokenizeLineOfInput(char* input) {
 
+  // printf("%s", input);
+
+// Fixed with chatgpt.
+  char** args = (char**)malloc(1 * sizeof(char*));
+  for (int n = 0; n <= 256; n++) {
+    args[n] = (char*)malloc(257 * sizeof(char));
+  }
+  int wordI = 0;
+  int charI = 0;
+  for (int n = 0; n < strlen(input); n++) {
+    // I needed a way to have a delimiter to parse commands by checking sections of whitespace, chatGPT suggested isspace()
+    // printf("%c", *(input + n));
+    if (!isspace(*(input + n))) {
+      // I used chatGPT 2 to debug and it suggested using
+      // another iterator for the characters and resetting it
+      // to 0 for each word which I have done a few lines below.
+      args[wordI][charI++] = input[n];
+      // args[wordI][charI + 1] = '\0';
+      // printf("%c", input[n]);
+    }
+    else {
+      charI = 0;
+      // args[wordI] = (char*)realloc(args, sizeof(args) + sizeof(char) * 256);
+      wordI++;
     }
   }
-  // printf("%d", *argumentCount);
+  args[256][256] = wordI;
+  // FOR TESTING.
+  // for (int n = 0; n < 4; n++) {
+
+  //   printf("%s", args[n]);
+  // }
+  return args;
 }
 
-int resize(char* input, int* argSize) {
+char* resize(char* input, int* argSize) {
   // printf("%s", input);
   for (int n = 0; n < strlen(input); n++) {
     // printf("%c", *(input + n));
@@ -130,5 +187,5 @@ int resize(char* input, int* argSize) {
       input = (char*)realloc(input, *argSize);
     }
   }
-  return *argSize;
+  return input;
 }
