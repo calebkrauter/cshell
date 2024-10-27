@@ -11,6 +11,20 @@ char* resize(char* input, int* argSize);
   @file         MyShell.c
   @author       Juhua Hu
   @author       Caleb Krauter
+  Refs:
+  Anytime chatgpt is mentioned chatGPT refers to the first link and chatGPT 2 refers to the second conversation.
+  chatGPT: https://chatgpt.com/share/6719ab0e-7080-8004-b93f-a654bc7b3121
+  chatGPT 2: https://chatgpt.com/share/671dde24-b7cc-8004-8fed-63eac01c3653
+  Hello world in C: https://www.youtube.com/watch?v=9VE7p-he4fA&t=272s
+  Setting up GCC: https://www.youtube.com/watch?v=o8XEzZBjQTs
+  chatgpt for setting up GCC: https://chatgpt.com/share/6719c276-1fb4-8004-b99a-3a6d7afeb838
+  ScanF for input https://www.w3schools.com/c/c_user_input.php
+  fgets documentation: https://en.cppreference.com/w/c/io/fgets
+  null char: https://stackoverflow.com/questions/1296843/what-is-the-difference-between-null-0-and-0
+  Modulus calculator: https://www.calculatorsoup.com/calculators/math/modulo-calculator.php
+  Used this video for malloc and realloc https://www.youtube.com/watch?v=j1jo8QQT7zw
+
+  ChatGPT also assisted heavily in debugging and memory management issuse.
 
 *******************************************************************************/
 
@@ -31,38 +45,39 @@ DONOT change the existing function definitions. You can add functions, if necess
 int execute(char** args)
 {
 
-
   // Storage of word count metadata.
-  // printf("%s", args[0]);
   int wordCount = args[256][256];
+  // Make sure that it doesn't try to execute commands that don't exist. ChatGPT 2 said I needed a null termination.
   args[wordCount + 1] = NULL;
-  printf("%d", args[256][256])
-    ;
-  // // FROM SLIDES
-  printf("pid:%d\n", (int)getpid());
+  // An exit flag.
+  int exiting = 0;
+  char* exitSignal = (char*)malloc(sizeof(char) * 5);
+  exitSignal = args[0];
+  int failedExecute = 0;
   int rc = fork();
+
   if (rc < 0) {
     fprintf(stderr, " could not fork.\n");
-    // MAY NEED TO FREE ARGS here too.
-    // for (int n = 0; n <= 256; n++) {
-    //   free(args[n]);
-    // }
-    // free(args);
-    exit(1);
+    exit(0);
   }
   else if (rc == 0) {
-    printf("Fork successful, child pid:%d\n", (int)getpid());
     for (int n = 0; args[n] != NULL; n++) {
-      printf("%d", n);
-      printf("%s", args[n]);
-      execvp(args[n], args);
+      failedExecute = execvp(args[n], args);
     }
-    printf("Running command: %s\n", args[0]);
+    // I had put this in the else statement and chatGPT 2 helped me to
+      // debug and move it here.
+    if (failedExecute == -1 && strcmp(exitSignal, "exit") != 0) {
 
+      printf("error executing command: No such file or directory\n");
+    }
+    else if (strcmp(exitSignal, "exit") == 0) {
+      exiting = 1;
+    }
   }
   else {
+    // Ensures that the parent process pauses before returning to the parent process from the executing child.
     int wc = wait(NULL);
-    printf("Parent pid: %d of child %d wc %d\n", (int)getpid(), rc, wc);
+    exiting = 1;
     return 0;
   }
 
@@ -71,6 +86,13 @@ int execute(char** args)
     free(args[n]);
   }
   free(args);
+
+  // I needed a way to show the pwd, chatGPT 2 suggested this.
+  char wd[1024];
+  if (exiting == 1 && getcwd(wd, sizeof(wd)) != NULL) {
+    printf("exiting");
+    printf("%s", wd);
+  }
   exit(1);
   return 0;
 }
@@ -85,19 +107,17 @@ char** parse(void)
   // *argumentCount = 0;
   char curArg[10000];
 
-  // I needed a way to take user input that wasn't constrained to a specfic type of data. Scanf() with %s would not include single characters
+  // I needed a way to take user input that wasn't constrained to a specfic type of data. 
+  // Scanf() with %s would not include single characters
   // and %c would not include full strings, ChatGPT suggested this function fgets()
   fgets(curArg, sizeof(curArg), stdin);
+  // I initalize 257 to meet the minimum of 255 arguments and to leave space for metadata to store the number of words.
   char** args = (char**)malloc(sizeof(char**) * 257);
   for (int n = 0; n <= 256; n++) {
     *args = (char*)malloc(sizeof(char*) * 257);
   }
   args = tokenizeLineOfInput(curArg);
-  printf("%d", execute(args));
-  // if (execute(args) == 1) {
-  //   exit(EXIT_SUCCESS);
-  // }
-  // printf("%s", tokenizeLineOfInput(curArg)[0]);
+  execute(args);
   return args;
 }
 
@@ -125,14 +145,10 @@ int main(int argc, char** argv) {
       ungetc(curChar, stdin);
     }
     // I needed a way to compare two strings and didn't want to manually compare them, ChatGPT suggested using strcmp()
-    // printf("%s", *parse());
     char** args = parse();
 
-    printf("%s", *args);
     if (args[0] != NULL) {
-
       if (strcmp(*args, "exit") == 0) {
-        // break;
         for (int n = 0; n <= 256; n++) {
           free(args[n]);
         }
@@ -144,12 +160,15 @@ int main(int argc, char** argv) {
   return EXIT_SUCCESS;
 }
 
-// 2 Used chatGPT to determine how to use argumentCount correctly as a pointer.
+/**
+   @brief A helper function that tokenizes the user input and counts the words storing the result as a number into the array near the end at
+  256x256.
+   @param input user input.
+   @return 2D array of arguments.
+ */
 char** tokenizeLineOfInput(char* input) {
 
-  // printf("%s", input);
-
-// Fixed with chatgpt.
+  // Debugged with chatgpt.
   char** args = (char**)malloc(257 * sizeof(char*));
   for (int n = 0; n <= 256; n++) {
     args[n] = (char*)malloc(257 * sizeof(char));
@@ -158,7 +177,6 @@ char** tokenizeLineOfInput(char* input) {
   int charI = 0;
   for (int n = 0; n < strlen(input); n++) {
     // I needed a way to have a delimiter to parse commands by checking sections of whitespace, chatGPT suggested isspace()
-    // printf("%c", *(input + n));
     if (!isspace(*(input + n))) {
       // I used chatGPT 2 to debug and it suggested using
       // another iterator for the characters and resetting it
@@ -166,17 +184,12 @@ char** tokenizeLineOfInput(char* input) {
       args[wordI][charI++] = input[n];
       // ChatGPT 2 suggested I null terminate the words.
       args[wordI][charI] = '\0';
-      // printf("%c", input[n]);
     }
     else {
       charI = 0;
-      // args[wordI] = (char*)realloc(args, sizeof(args) + sizeof(char) * 256);
       if (n < strlen(input) - 1) {
-
         wordI++;
       }
-      // ChatGPT 2 said I need to null terminate for execute to work.
-
     }
   }
   // Storing word count into the arguments.
@@ -186,6 +199,7 @@ char** tokenizeLineOfInput(char* input) {
   return args;
 }
 
+// UNFINISHED
 // This resize function is intended for resizing
 // the storage allocated for a string.
 // However I also need to dynamically resize for the number of words.
